@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Happiness Reflection</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Screenshot library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+
+body{
+margin:0;
+font-family:Segoe UI,sans-serif;
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+background:linear-gradient(120deg,#0f2027,#203a43,#2c5364);
+}
+
+.card{
+background:rgba(255,255,255,.95);
+max-width:760px;
+width:92%;
+padding:30px;
+border-radius:20px;
+box-shadow:0 25px 50px rgba(0,0,0,.25);
+}
+
+h1,h2{text-align:center}
+
+.question{
+margin-bottom:20px;
+font-size:1.2rem;
+}
+
+.options button{
+width:100%;
+margin:8px 0;
+padding:12px;
+border-radius:14px;
+border:none;
+font-size:1rem;
+cursor:pointer;
+background:linear-gradient(135deg,#fddb92,#d1fdff);
+transition:.25s;
+}
+
+.options button:hover{
+transform:scale(1.05);
+}
+
+button.primary{
+margin-top:15px;
+padding:12px 22px;
+border-radius:14px;
+border:none;
+font-size:1rem;
+cursor:pointer;
+background:linear-gradient(135deg,#ff9a9e,#fad0c4);
+}
+
+#quiz{display:none}
+#result{display:none}
+
+.progressContainer{
+height:14px;
+background:#eee;
+border-radius:10px;
+overflow:hidden;
+margin-bottom:20px;
+}
+
+.progressBar{
+height:100%;
+width:0%;
+background:linear-gradient(90deg,#ff9a9e,#fad0c4,#a1c4fd);
+transition:width .5s ease;
+}
+
+/* Share card styling */
+
+.resultCard{
+margin-top:20px;
+padding:35px;
+border-radius:18px;
+background:linear-gradient(135deg,#ff9a9e,#fad0c4,#a1c4fd,#c2e9fb);
+color:#222;
+box-shadow:0 15px 35px rgba(0,0,0,.25);
+text-align:center;
+}
+
+.resultCard h3{
+font-size:2rem;
+margin-bottom:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- Instructions -->
+
+<div class="card" id="instructions">
+
+<h1>Happiness Reflection</h1>
+
+<p>This short reflection explores your outlook on life.</p>
+
+<ul>
+<li>You will answer 29 statements</li>
+<li>Choose the option that best represents how you feel</li>
+<li>There are no right or wrong answers</li>
+</ul>
+
+<div style="text-align:center">
+<button class="primary" onclick="startQuiz()">Start Quiz</button>
+</div>
+
+</div>
+
+
+<!-- Quiz -->
+
+<div class="card" id="quiz">
+
+<div class="progressContainer">
+<div class="progressBar" id="progressBar"></div>
+</div>
+
+<h2 id="progress"></h2>
+
+<div id="question"></div>
+<div id="options" class="options"></div>
+
+</div>
+
+
+<!-- Result -->
+
+<div class="card" id="result">
+
+<h2>Your Result</h2>
+
+<div id="shareCard" class="resultCard">
+
+<h3 id="mood"></h3>
+<p id="description"></p>
+
+<p style="opacity:.7">Happiness Reflection</p>
+
+</div>
+
+<div style="text-align:center">
+
+<button class="primary" onclick="downloadCard()">Download Card</button>
+<button class="primary" onclick="shareResult()">Share Result</button>
+<button class="primary" onclick="restartQuiz()">Try Again</button>
+
+</div>
+
+</div>
+
+
+<script>
+
+function scaleOptions(){
+return[
+{text:'Strongly Disagree',value:1},
+{text:'Moderately Disagree',value:2},
+{text:'Slightly Disagree',value:3},
+{text:'Slightly Agree',value:4},
+{text:'Moderately Agree',value:5},
+{text:'Strongly Agree',value:6}
+];
+}
+
+const questions=[
+
+{q:'I don’t feel particularly pleased with the way I am.',reverse:true},
+{q:'I am intensely interested in other people.'},
+{q:'I feel that life is very rewarding.'},
+{q:'I have very warm feelings towards almost everyone.'},
+{q:'I rarely wake up feeling rested.',reverse:true},
+{q:'I am not particularly optimistic about the future.',reverse:true},
+{q:'I find most things amusing.'},
+{q:'I am always committed and involved.'},
+{q:'Life is good.'},
+{q:'I do not think that the world is a good place.',reverse:true},
+{q:'I laugh a lot.'},
+{q:'I am well satisfied about everything in my life.'},
+{q:'I don’t think I look attractive.',reverse:true},
+{q:'There is a gap between what I would like to do and what I have done.',reverse:true},
+{q:'I am very happy.'},
+{q:'I find beauty in some things.'},
+{q:'I always have a cheerful effect on others.'},
+{q:'I can fit in everything I want to.'},
+{q:'I feel that I am not especially in control of my life.',reverse:true},
+{q:'I feel able to take anything on.'},
+{q:'I feel fully mentally alert.'},
+{q:'I often experience joy and elation.'},
+{q:'I don’t find it easy to make decisions.',reverse:true},
+{q:'I don’t have a particular sense of meaning and purpose in my life.',reverse:true},
+{q:'I feel I have a great deal of energy.'},
+{q:'I usually have a good influence on events.'},
+{q:'I don’t have fun with other people.',reverse:true},
+{q:'I don’t feel particularly healthy.',reverse:true},
+{q:'I don’t have particularly happy memories of the past.',reverse:true}
+
+];
+
+let index=0;
+let responses=[];
+
+const qEl=document.getElementById("question");
+const oEl=document.getElementById("options");
+const progressBar=document.getElementById("progressBar");
+
+function startQuiz(){
+
+index=0;
+responses=[];
+
+document.getElementById("instructions").style.display="none";
+document.getElementById("quiz").style.display="block";
+
+loadQuestion();
+
+}
+
+function loadQuestion(){
+
+const current=questions[index];
+
+qEl.innerHTML=`<div class="question"><strong>${current.q}</strong></div>`;
+
+document.getElementById("progress").textContent=`Question ${index+1} of ${questions.length}`;
+progressBar.style.width=((index)/questions.length*100)+"%";
+
+oEl.innerHTML="";
+
+scaleOptions().forEach(opt=>{
+
+const btn=document.createElement("button");
+btn.textContent=opt.text;
+
+btn.onclick=()=>answer(opt.value);
+
+oEl.appendChild(btn);
+
+});
+
+}
+
+function answer(value){
+
+responses.push(value);
+index++;
+
+if(index<questions.length){
+
+loadQuestion();
+
+}else{
+
+showResult();
+
+}
+
+}
+
+function showResult(){
+
+let total=0;
+
+questions.forEach((q,i)=>{
+
+let v=responses[i];
+
+if(q.reverse){v=7-v}
+
+total+=v;
+
+});
+
+const score=total/questions.length;
+
+let mood;
+
+if(score>=5) mood="Radiant Happiness";
+else if(score>=4) mood="Brightly Happy";
+else if(score>=3) mood="Balanced";
+else mood="Searching for Light";
+
+window.finalMood=mood;
+window.finalScore=score.toFixed(2);
+
+document.getElementById("quiz").style.display="none";
+document.getElementById("result").style.display="block";
+
+document.getElementById("mood").textContent=mood;
+document.getElementById("description").textContent="Score: "+score.toFixed(2);
+
+}
+
+function downloadCard(){
+
+const card=document.getElementById("shareCard");
+
+html2canvas(card).then(canvas=>{
+
+const link=document.createElement("a");
+link.download="happiness-result.png";
+link.href=canvas.toDataURL();
+link.click();
+
+});
+
+}
+
+function shareResult(){
+
+const card=document.getElementById("shareCard");
+
+html2canvas(card).then(canvas=>{
+
+canvas.toBlob(function(blob){
+
+const file=new File([blob],"happiness-result.png",{type:"image/png"});
+
+if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+
+navigator.share({files:[file]}).catch(()=>{});
+
+}else{
+
+downloadCard();
+
+}
+
+});
+
+});
+
+}
+
+function restartQuiz(){
+
+index=0;
+responses=[];
+progressBar.style.width="0%";
+
+document.getElementById("result").style.display="none";
+document.getElementById("quiz").style.display="block";
+
+loadQuestion();
+
+}
+
+</script>
+
+</body>
+</html>
